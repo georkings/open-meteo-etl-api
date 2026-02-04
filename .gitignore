@@ -1,3 +1,8 @@
+# Ignore the SQLite database file
+# EXCEPT a placeholder file to include the folder in Git
+data/sql_app.db
+!.gitkeep
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

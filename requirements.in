@@ -1,4 +1,7 @@
 fastapi
-uvicorn[standard]
+pandas
 pydantic
 pydantic-settings
+requests
+sqlalchemy
+uvicorn[standard]

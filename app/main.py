@@ -4,6 +4,10 @@ from fastapi import FastAPI
 
 from app.api.base import router as api_router
 from app.core.settings import settings
+from app.database import Base, engine
+
+# Create the tables on startup (only if they don't exist)
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title=settings.app_title,
