@@ -4,7 +4,8 @@ from fastapi import FastAPI
 
 from app.api.base import router as api_router
 from app.core.settings import settings
-from app.database import Base, engine
+from app.database.session import engine
+from app.models.base import Base
 
 # Create the tables on startup (only if they don't exist)
 Base.metadata.create_all(bind=engine)

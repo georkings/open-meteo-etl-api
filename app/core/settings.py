@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./data/sql_app.db"
     geo_url: str = "https://geocoding-api.open-meteo.com/v1/search"
     archive_url: str = "https://archive-api.open-meteo.com/v1/archive"
+    temp_threshold_high: float = 30.0
+    temp_threshold_low: float = 0.0
 
 
 settings = Settings()
