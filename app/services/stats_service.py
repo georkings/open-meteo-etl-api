@@ -1,5 +1,6 @@
 """Stats service for temperature and precipitation calculations."""
 
+import logging
 from datetime import date, timedelta
 
 import pandas as pd
@@ -9,12 +10,15 @@ from sqlalchemy.orm import Session
 from app.models.city import City
 from app.models.weather import WeatherData
 
+logger = logging.getLogger(__name__)
+
 
 def _get_weather_data(db: Session, city_name: str, start_date: date, end_date: date):
     """Internal helper to validate city, check range, and return a DataFrame."""
     # 1. City existence
     city = db.query(City).filter(City.name.ilike(city_name)).first()
     if not city:
+        logger.warning(f"Stats requested for unknown city: {city_name}")
         return None, {"error": "CITY_NOT_FOUND"}
 
     # 2. Coverage Check (Min/Max in DB)
@@ -26,9 +30,13 @@ def _get_weather_data(db: Session, city_name: str, start_date: date, end_date: d
 
     db_min, db_max = range_query
     if not db_min or not db_max:
+        logger.warning(f"No weather data records found in DB for city: {city_name}")
         return None, {"error": "NO_DATA_AVAILABLE"}
 
     if start_date < db_min.date() or end_date > db_max.date():
+        logger.info(
+            f"Requested range {start_date} to {end_date} is out of DB coverage for {city_name}"
+        )
         return None, {
             "error": "OUT_OF_RANGE",
             "db_min": str(db_min.date()),
@@ -44,6 +52,10 @@ def _get_weather_data(db: Session, city_name: str, start_date: date, end_date: d
             WeatherData.timestamp >= start_date,
             WeatherData.timestamp <= end_date + timedelta(days=1),
         )
+    )
+
+    logger.debug(
+        f"Executing SQL query for {city_name} range: {start_date} to {end_date}"
     )
     df = pd.read_sql(query.statement, db.get_bind())
 
@@ -62,6 +74,7 @@ def get_temperature_stats(
     t_above: float,
     t_below: float,
 ):
+    logger.debug(f"Calculating temperature stats for {city_name}")
     df, error = _get_weather_data(db, city_name, start_date, end_date)
     if error:
         return error
@@ -96,6 +109,7 @@ def get_temperature_stats(
 def get_precipitation_stats(
     db: Session, city_name: str, start_date: date, end_date: date
 ):
+    logger.info(f"Calculating precipitation stats for {city_name}")
     df, error = _get_weather_data(db, city_name, start_date, end_date)
     if error:
         return error
@@ -119,6 +133,7 @@ def get_precipitation_stats(
 
 
 def get_all_cities_summary(db: Session):
+    logger.info("Generating general summary for all cities")
     # 1. Fetch raw data with City names
     query = (
         db.query(
@@ -173,4 +188,5 @@ def get_all_cities_summary(db: Session):
             },
         }
 
+    logger.info(f"Summary generated for {len(result)} cities")
     return result

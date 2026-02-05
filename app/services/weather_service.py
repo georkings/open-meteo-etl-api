@@ -1,9 +1,13 @@
 """Service to handle weather data storage and synchronization."""
 
+import logging
+
 import pandas as pd
 from sqlalchemy.orm import Session
 
 from app.models.weather import WeatherData
+
+logger = logging.getLogger(__name__)
 
 
 def store_weather_in_db(db: Session, city_id: int, api_response: dict):
@@ -17,7 +21,7 @@ def store_weather_in_db(db: Session, city_id: int, api_response: dict):
     hourly_data = api_response.get("hourly", {})
 
     if not hourly_data:
-        print(f"⚠️ No hourly data found in API response for city_id {city_id}")
+        logger.warning(f"⚠️ No hourly data found in API response for city_id {city_id}")
         return
 
     # Convert the dictionary to a DataFrame
@@ -53,9 +57,11 @@ def store_weather_in_db(db: Session, city_id: int, api_response: dict):
 
         # 4. Finalize the transaction
         db.commit()
-        print(f"✅ Successfully synchronized {len(df)} records for city_id {city_id}")
+        logger.info(
+            f"✅ Successfully synchronized {len(df)} records for city_id {city_id}"
+        )
 
     except Exception as e:
         db.rollback()
-        print(f"❌ Failed to store weather data: {e}")
+        logger.error(f"❌ Failed to store weather data: {e}")
         raise e

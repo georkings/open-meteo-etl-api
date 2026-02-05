@@ -1,27 +1,32 @@
 """Script to load weather data into the local database."""
 
 import argparse
+import logging
 
 import requests
 
+from app.core.logging import setup_logging
 from app.core.settings import settings
 from app.database.session import SessionLocal, engine
 from app.models import Base, City, WeatherData  # noqa: F401
 from app.services.weather_service import store_weather_in_db
 
+setup_logging(settings.log_level)
+logger = logging.getLogger(__name__)
 
-def load_weather_data(city_name, start_date, end_date):
+
+def load_weather_data(city_name: str, start_date: str, end_date: str):
     # Ensure the database and tables exist before doing anything else
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
         # 1. Fetch Coordinates (Geocoding)
-        print(f"🔍 Searching coordinates for {city_name}...")
+        logger.info(f"🔍 Searching coordinates for {city_name}...")
         geo_params = {"name": city_name, "count": 1, "language": "en"}
         geo_res = requests.get(settings.geo_url, params=geo_params).json()
 
         if not geo_res.get("results"):
-            print(f"❌ Error: City '{city_name}' not found.")
+            logger.warning(f"❌ Error: City '{city_name}' not found.")
             return
 
         location = geo_res["results"][0]
@@ -34,12 +39,14 @@ def load_weather_data(city_name, start_date, end_date):
             db.add(db_city)
             db.commit()
             db.refresh(db_city)
-            print(f"✅ Created new city entry for {city_name}.")
+            logger.info(f"✅ Created new city entry for {city_name}.")
         else:
-            print(f"⚠️ City {city_name} already exists. Old data will be overwritten.")
+            logger.warning(
+                f"⚠️ City {city_name} already exists. Old data will be overwritten."
+            )
 
         # 3. Fetch Weather Data (Archive)
-        print(f"⏳ Downloading weather from {start_date} to {end_date}...")
+        logger.info(f"⏳ Downloading weather from {start_date} to {end_date}...")
         weather_params = {
             "latitude": lat,
             "longitude": lon,
@@ -51,10 +58,10 @@ def load_weather_data(city_name, start_date, end_date):
 
         # 4. Save to DB using the Service
         store_weather_in_db(db, db_city.id, weather_res)
-        print(f"🚀 Success! Data for {city_name} is now synchronized.")
+        logger.info(f"🚀 Success! Data for {city_name} is now synchronized.")
 
     except Exception as e:
-        print(f"💥 An error occurred: {e}")
+        logger.error(f"💥 An error occurred: {e}")
     finally:
         db.close()
 
