@@ -1,0 +1,4 @@
+-c requirements.txt  # This tells pip-tools to respect the versions in your main file
+httpx
+pytest
+pytest-cov
